@@ -1,4 +1,4 @@
-package main
+package helper
 
 import (
 	"bytes"
@@ -13,12 +13,10 @@ import (
 	"sort"
 	"strings"
 	"time"
-
-	"github.com/aniket0951.com/users"
 )
 
 const (
-	Host     = "https://openapi.tuyain.com"
+	Host     = "https://openapi.tuyacn.com"
 	ClientID = "hkurt3tgtmyj7ghevd39"
 	Secret   = "8feedecdd12f41f487d89d1c5f380e6a"
 	DeviceID = ""
@@ -40,14 +38,7 @@ type TokenResponse struct {
 }
 
 func main() {
-
 	GetToken()
-	//GetUserPermissions()
-	users.Token = Token
-	//users.RegisterUsers()
-	//users.GetUsers()
-	//users.DeleteDevice()
-	users.RegisterDevice()
 	//GetDevice(DeviceID)
 }
 
@@ -67,7 +58,7 @@ func GetToken() {
 	bs, _ := ioutil.ReadAll(resp.Body)
 	ret := TokenResponse{}
 	json.Unmarshal(bs, &ret)
-	log.Println("Get Tooken resp:", string(bs))
+	log.Println("resp:", string(bs))
 
 	if v := ret.Result.AccessToken; v != "" {
 		Token = v
@@ -94,12 +85,11 @@ func GetUserPermissions() {
 		log.Println(err)
 		return
 	}
-
 	defer resp.Body.Close()
 	bs, _ := ioutil.ReadAll(resp.Body)
 	ret := TokenResponse{}
 	json.Unmarshal(bs, &ret)
-	log.Println("permission resp:", string(bs))
+	log.Println("resp:", string(bs))
 
 	if v := ret.Result.AccessToken; v != "" {
 		Token = v
@@ -123,29 +113,23 @@ func GetDevice(deviceId string) {
 }
 
 func buildHeader(req *http.Request, body []byte) {
+	req.Header.Add("client_id", ClientID)
+	req.Header.Add("secret", Secret)
+	req.Header.Add("sign_method", "HMAC-SHA256")
 
-
-	req.Header["client_id"] = []string{ClientID}
-	req.Header["sign_method"] = []string{"HMAC-SHA256"}
-	req.Header["mode"] = []string{"cors"}
-	req.Header["Content-Type"] = []string{"application/json"}
+	req.Header.Add("mode", "cors")
+	req.Header.Add("Content-Type", "application/json")
 
 	ts := fmt.Sprint(time.Now().UnixNano() / 1e6)
+	req.Header.Add("t", ts)
 
+	if Token != "" {
+		req.Header.Add("access_token", Token)
+	}
 
-	req.Header["t"] = []string{ts}
-
-	// if Token != "" {
-	// 	//req.Header.Add("access_token", Token)
-	// 	req.Header["access_token"] = []string{Token}
-	// }
-
-	req.Header["access_token"] = []string{Token}
-
-	req.Header["Signature-Headers"] = []string{"client_id:sign_method:mode:Content-Type:t:access_token"}
 	sign := buildSign(req, body, ts)
-	req.Header["sign"] = []string{sign}
 
+	req.Header.Add("sign", sign)
 }
 
 func buildSign(req *http.Request, body []byte, t string) string {
@@ -188,24 +172,16 @@ func getUrlStr(req *http.Request) string {
 }
 
 func getHeaderStr(req *http.Request) string {
-
 	signHeaderKeys := req.Header.Get("Signature-Headers")
 	if signHeaderKeys == "" {
 		return ""
 	}
 	keys := strings.Split(signHeaderKeys, ":")
 	headers := ""
-
 	for _, key := range keys {
-		val := req.Header[key]
-
-		if len(val) > 0 {
-			headers += key + ":" + val[0] + "\n"
-		}else{
-			headers += key + ":" + "" +"\n"
-		}
+		headers += key + ":" + req.Header.Get(key) + "\n"
 	}
-
+	fmt.Println("Returing a headers from req : ", headers)
 	return headers
 }
 

@@ -1,4 +1,4 @@
-package main
+package users
 
 import (
 	"bytes"
@@ -13,10 +13,7 @@ import (
 	"sort"
 	"strings"
 	"time"
-
-	"github.com/aniket0951.com/users"
 )
-
 const (
 	Host     = "https://openapi.tuyain.com"
 	ClientID = "hkurt3tgtmyj7ghevd39"
@@ -24,40 +21,40 @@ const (
 	DeviceID = ""
 )
 
-var (
-	Token string
-)
+var  Token string
 
-type TokenResponse struct {
-	Result struct {
-		AccessToken  string `json:"access_token"`
-		ExpireTime   int    `json:"expire_time"`
-		RefreshToken string `json:"refresh_token"`
-		UID          string `json:"uid"`
-	} `json:"result"`
-	Success bool  `json:"success"`
-	T       int64 `json:"t"`
+type UserRegister struct {
+	Name string `json:"username"`
+	Password string `json:"password"`
+	CountryCode string `json:"country_code"`
 }
 
-func main() {
+func RegisterUsers() {
+	// reqBody := UserRegister{
+	// 	"Rohit Test User",
+	// 	"596dd1e610d5c82e6bb257d1b8c6171366ed6725fa7c4a894b0573346eaa8132",
+	// 	"+91",
+	// }
 
-	GetToken()
-	//GetUserPermissions()
-	users.Token = Token
-	//users.RegisterUsers()
-	//users.GetUsers()
-	//users.DeleteDevice()
-	users.RegisterDevice()
-	//GetDevice(DeviceID)
-}
+	
 
-func GetToken() {
-	method := "GET"
+	method := "POST"
+	url := "https://openapi.tuyain.com/v1.0/iot-02/users"
+
+	// body,marErr := json.Marshal(&reqBody)
 	body := []byte(``)
-	req, _ := http.NewRequest(method, Host+"/v1.0/token?grant_type=1", bytes.NewReader(body))
+	// if marErr != nil {
+	// 	fmt.Println(marErr)
+	// }
+	req, reqErr := http.NewRequest(method, url, bytes.NewReader(body))
 
-	buildHeader(req, body)
-	fmt.Println("Request : ", req.Header)
+	if reqErr != nil {
+		fmt.Println(reqErr)
+	}
+
+
+
+	buildHeaders(req, body)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		log.Println(err)
@@ -65,53 +62,39 @@ func GetToken() {
 	}
 	defer resp.Body.Close()
 	bs, _ := ioutil.ReadAll(resp.Body)
-	ret := TokenResponse{}
+	var ret  interface{}
 	json.Unmarshal(bs, &ret)
-	log.Println("Get Tooken resp:", string(bs))
-
-	if v := ret.Result.AccessToken; v != "" {
-		Token = v
-	}
+	log.Println("GUser Response:", string(bs))
 }
 
-// get user permissions
-
-func GetUserPermissions() {
+func GetUsers() {
 	method := "GET"
-	// mp := map[string]string{}
-	// mp["device_name"] = "RohitFirstDevice"
-	// mp["product_id"] = "xkdrfiieu5wbhmbq"
-
+	url := Host+"/v1.0/iot-02/users/bin1688816789313f5GX"
 	body := []byte(``)
 
-	req, reqErr := http.NewRequest(method, Host+"/v1.0/iot-02/users/bay1687262453468f92G/permissions", bytes.NewReader(body))
+	req,_ := http.NewRequest(method, url, bytes.NewReader(body))
 
-	fmt.Println("Request Error : ", reqErr)
-
-	buildHeader(req, body)
+	buildHeaders(req, body)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-
 	defer resp.Body.Close()
 	bs, _ := ioutil.ReadAll(resp.Body)
-	ret := TokenResponse{}
+	var ret  interface{}
 	json.Unmarshal(bs, &ret)
-	log.Println("permission resp:", string(bs))
-
-	if v := ret.Result.AccessToken; v != "" {
-		Token = v
-	}
+	log.Println("Single User Response:", string(bs))
 }
 
-func GetDevice(deviceId string) {
-	method := "GET"
+func DeleteDevice() {
+	method := "DELETE"
+	url := Host + "/v2.0/cloud/thing/vdevo168862586510828"
 	body := []byte(``)
-	req, _ := http.NewRequest(method, Host+"/v1.0/devices/"+deviceId, bytes.NewReader(body))
 
-	buildHeader(req, body)
+	req, _ := http.NewRequest(method, url, bytes.NewReader(body))
+
+	buildHeaders(req, body)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		log.Println(err)
@@ -119,10 +102,41 @@ func GetDevice(deviceId string) {
 	}
 	defer resp.Body.Close()
 	bs, _ := ioutil.ReadAll(resp.Body)
-	log.Println("resp:", string(bs))
+	var ret  interface{}
+	json.Unmarshal(bs, &ret)
+	log.Println("Delete Device Response:", string(bs))
 }
 
-func buildHeader(req *http.Request, body []byte) {
+func RegisterDevice() {
+	method := "POST"
+	url := Host + "/v1.0/iot-03/3rdcloud/devices/A180072108301212/register"
+
+	bodyJSON := struct{
+		DeviceName string `json:"device_name"`
+		ProductID string `json:"product_id"`
+		}{
+			"RohitFirstDevice",
+			"xkdrfiieu5wbhmbq",
+		}
+	
+	body,_ := json.Marshal(bodyJSON)
+
+	req, _ := http.NewRequest(method, url, bytes.NewReader(body))
+
+	buildHeaders(req, body)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	defer resp.Body.Close()
+	bs, _ := ioutil.ReadAll(resp.Body)
+	var ret  interface{}
+	json.Unmarshal(bs, &ret)
+	log.Println("Register Device Response:", string(bs))
+}
+
+func buildHeaders(req *http.Request, body []byte) {
 
 
 	req.Header["client_id"] = []string{ClientID}
@@ -132,7 +146,6 @@ func buildHeader(req *http.Request, body []byte) {
 
 	ts := fmt.Sprint(time.Now().UnixNano() / 1e6)
 
-
 	req.Header["t"] = []string{ts}
 
 	// if Token != "" {
@@ -141,30 +154,28 @@ func buildHeader(req *http.Request, body []byte) {
 	// }
 
 	req.Header["access_token"] = []string{Token}
-
 	req.Header["Signature-Headers"] = []string{"client_id:sign_method:mode:Content-Type:t:access_token"}
-	sign := buildSign(req, body, ts)
+	sign := buildSigns(req, body, ts)
 	req.Header["sign"] = []string{sign}
-
 }
 
-func buildSign(req *http.Request, body []byte, t string) string {
-	headers := getHeaderStr(req)
-	urlStr := getUrlStr(req)
-	contentSha256 := Sha256(body)
+func buildSigns(req *http.Request, body []byte, t string) string {
+	headers := getHeaderStrs(req)
+	urlStr := getUrlStrs(req)
+	contentSha256 := Sha256Algo(body)
 	stringToSign := req.Method + "\n" + contentSha256 + "\n" + headers + "\n" + urlStr
 	signStr := ClientID + Token + t + stringToSign
-	sign := strings.ToUpper(HmacSha256(signStr, Secret))
+	sign := strings.ToUpper(HmacSha256Algo(signStr, Secret))
 	return sign
 }
 
-func Sha256(data []byte) string {
+func Sha256Algo(data []byte) string {
 	sha256Contain := sha256.New()
 	sha256Contain.Write(data)
 	return hex.EncodeToString(sha256Contain.Sum(nil))
 }
 
-func getUrlStr(req *http.Request) string {
+func getUrlStrs(req *http.Request) string {
 	url := req.URL.Path
 	keys := make([]string, 0, 10)
 
@@ -187,7 +198,7 @@ func getUrlStr(req *http.Request) string {
 	return url
 }
 
-func getHeaderStr(req *http.Request) string {
+func getHeaderStrs(req *http.Request) string {
 
 	signHeaderKeys := req.Header.Get("Signature-Headers")
 	if signHeaderKeys == "" {
@@ -206,10 +217,11 @@ func getHeaderStr(req *http.Request) string {
 		}
 	}
 
+	fmt.Println("Returing a headers from req : ", headers)
 	return headers
 }
 
-func HmacSha256(message string, secret string) string {
+func HmacSha256Algo(message string, secret string) string {
 	key := []byte(secret)
 	h := hmac.New(sha256.New, key)
 	h.Write([]byte(message))
